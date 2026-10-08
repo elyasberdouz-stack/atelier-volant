@@ -53,9 +53,9 @@ window.SITE = {
      Même ordre que les 3 premiers prix de chaque modèle plus bas.
      « {marque} » est remplacé par Apple, Samsung, Xiaomi ou Google. */
   qualitesEcran: [
-    { id: "premium",  nom: "Écran premium",       badge: "Populaire",  ton: "ambre",
+    { id: "premium",  nom: "Écran premium",       badge: "Populaire",  ton: "accent",
       desc: "Entrée de gamme. Le choix de la majorité.", garantie: 1 },
-    { id: "softoled", nom: "Écran Soft OLED",     badge: "Recommandé", ton: "menthe",
+    { id: "softoled", nom: "Écran Soft OLED",     badge: "Recommandé", ton: "ok",
       desc: "Le meilleur rapport qualité-prix. Le plus proche de l'original.", garantie: 3 },
     { id: "original", nom: "Écran original {marque}",
       desc: "Pièce d'origine. Rendu identique au neuf.", garantie: 6 }

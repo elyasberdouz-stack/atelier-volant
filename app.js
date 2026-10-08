@@ -362,7 +362,7 @@ const VIEWS = {
           : head("Ton téléphone réparé chez toi.", `Écran, batterie, charge… Un réparateur se déplace chez toi en ${esc(E.region)}.`)}
         <div class="choices">
           <a class="choice choice--hi" href="#reparer" data-go="modele">
-            <span class="badge badge--ambre">${icon("maison", "ico--xs")} Réparation à domicile</span>
+            <span class="badge badge--accent">${icon("maison", "ico--xs")} Réparation à domicile</span>
             <h2>${deux ? "Réparer mon téléphone" : "Obtenir mon devis"}</h2>
             <p>${deux ? `Ton prix en 40 secondes, un réparateur chez toi en ${esc(E.region)}.` : "Choisis ton modèle et la panne : ton prix s'affiche en 40 secondes."}</p>
             <span class="choice__foot"><span class="choice__from">Écran dès <b>${euro(minScreen)}</b> · déplacement offert</span><span class="go">${icon("arrow")}</span></span>
@@ -484,7 +484,7 @@ const VIEWS = {
             <div class="tel" id="telBox"><span class="flag" aria-hidden="true"></span><span class="tel__cc">+33</span><input id="fTel" type="tel" inputmode="tel" autocomplete="tel" enterkeyhint="send" placeholder="06 12 34 56 78" value="${esc(D.tel)}"></div>
           </div>
           <p class="err" id="telErr" hidden></p>
-          <button type="submit" class="btn btn--amber" id="seeBtn">Voir mon devis</button>
+          <button type="submit" class="btn btn--accent" id="seeBtn">Voir mon devis</button>
           <p class="fine">Ton numéro sert uniquement à te recontacter pour ta réparation.</p>
         </form>
       </div>`;
@@ -498,7 +498,7 @@ const VIEWS = {
       : `<div class="done done--todo"><span class="done__ico">${icon("wa", "ico--s")}</span><span class="done__txt"><b>Dernière étape</b><span>Envoie ce devis sur WhatsApp pour réserver : on te répond dans les ${esc(E.delaiReponse)}.</span></span></div>`;
     return `
       <div class="page">
-        ${head(`Voilà ton devis${D.prenom ? ", " + esc(D.prenom) : ""}`, "", `<span style="color:var(--mint)">Devis n° ${esc(D.ref)}</span>`)}
+        ${head(`Voilà ton devis${D.prenom ? ", " + esc(D.prenom) : ""}`, "", `<span style="color:var(--ok)">Devis n° ${esc(D.ref)}</span>`)}
         ${status}
         <article class="ticket">
           <div class="ticket__top"><span class="tape">Devis</span><span class="ticket__ref">${esc(new Intl.DateTimeFormat("fr-FR").format(new Date()))}</span></div>
@@ -522,7 +522,7 @@ const VIEWS = {
         <div class="actions">
           ${D.auto
             ? `<a class="btn btn--line" href="${waLink(msgClient())}" target="_blank" rel="noopener">${icon("wa")} Écrire sur WhatsApp maintenant</a>`
-            : `<a class="btn btn--amber" href="${waLink(msgClient())}" target="_blank" rel="noopener">${icon("wa")} Envoyer mon devis sur WhatsApp</a>`}
+            : `<a class="btn btn--accent" href="${waLink(msgClient())}" target="_blank" rel="noopener">${icon("wa")} Envoyer mon devis sur WhatsApp</a>`}
           <button type="button" class="btn btn--line" data-go="pannes">Modifier mon devis</button>
         </div>
         <p class="section-t">Et maintenant&nbsp;?</p>
@@ -549,12 +549,12 @@ const VIEWS = {
           <div class="field"><label for="ffPrenom">Ton prénom</label><input class="input" id="ffPrenom" type="text" autocomplete="given-name" value="${esc(D.fPrenom)}"></div>
           <div class="field"><label for="ffTel">Ton numéro WhatsApp</label><div class="tel" id="ffTelBox"><span class="flag" aria-hidden="true"></span><span class="tel__cc">+33</span><input id="ffTel" type="tel" inputmode="tel" autocomplete="tel" placeholder="06 12 34 56 78" value="${esc(D.fTel)}"></div></div>
           <p class="err" id="ffErr" hidden></p>
-          <button type="submit" class="btn btn--amber">Je veux en savoir plus</button>
+          <button type="submit" class="btn btn--accent">Je veux en savoir plus</button>
           <p class="fine">On t'envoie le programme et les prochaines dates sur WhatsApp.</p>
         </form>` : D.fSent
           ? `<div class="done"><span class="done__ico"><svg class="ico ico--s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span><span class="done__txt"><b>C'est noté&nbsp;!</b><span>On t'écrit sur WhatsApp dans les ${esc(E.delaiReponse)} avec le programme.</span></span></div>`
           : `<div class="done done--todo"><span class="done__ico">${icon("wa", "ico--s")}</span><span class="done__txt"><b>Dernière étape</b><span>Envoie-nous ta demande sur WhatsApp, on te répond avec le programme.</span></span></div>
-             <a class="btn btn--amber" href="${waLink(msgFormation(false))}" target="_blank" rel="noopener">${icon("wa")} Envoyer sur WhatsApp</a>`}
+             <a class="btn btn--accent" href="${waLink(msgFormation(false))}" target="_blank" rel="noopener">${icon("wa")} Envoyer sur WhatsApp</a>`}
       </div>`;
   }
 };
@@ -593,7 +593,7 @@ function battery(step, full) {
   return `<span class="battery${full ? " is-full" : ""}" aria-label="Étape ${step} sur ${STEPS}"><span class="battery__body">${Array.from({ length: STEPS }, (_, k) => k + 1).map((i) => `<span class="battery__cell${i <= step ? " on" : ""}"></span>`).join("")}</span>${full ? "100 %" : `${step}/${STEPS}`}</span>`;
 }
 function barHtml() {
-  const btn = (label, act, disabled) => `<button type="button" class="btn btn--amber" data-act="${act}"${disabled ? " disabled" : ""}>${label}</button>`;
+  const btn = (label, act, disabled) => `<button type="button" class="btn btn--accent" data-act="${act}"${disabled ? " disabled" : ""}>${label}</button>`;
   if (page === "pannes") {
     const c = calc();
     const n = D.pannes.length;

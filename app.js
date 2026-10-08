@@ -265,7 +265,7 @@ function msgClient() {
     "",
     `📍 ${deptTxt()}`,
     `🗓 ${D.quandLbl}`,
-    `👤 ${D.prenom || ""} · ${telNational(D.tel)}`.trim(),
+    `👤 ${[D.prenom, telNational(D.tel)].filter(Boolean).join(" · ")}`,
     viaTxt() ? `📣 Je vous ai trouvé sur ${viaTxt()}` : ""
   ].filter((l, i, a) => l !== "" || i < a.length - 1).join("\n");
 }

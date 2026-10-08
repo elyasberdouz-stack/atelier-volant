@@ -37,6 +37,9 @@ const ICONS = {
   phone: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/>',
   percent: '<path d="M19 5 5 19"/><circle cx="7" cy="7" r="2.3"/><circle cx="17" cy="17" r="2.3"/>',
   star: '<path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"/>',
+  flash: '<path d="M13 2.5 4.5 13.5h6.5l-1 8 8.5-11h-6.5z"/>',
+  cal: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/>',
+  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
   info: '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8v.1"/>'
 };
 const icon = (name, cls = "") =>
@@ -72,8 +75,8 @@ const minScreen = Math.min(...Object.values(MODELS).map((m) => screenFrom(m)).fi
 /* État du devis */
 const D = {
   brand: "apple", model: null, query: "", customOpen: false, customText: "", sousMarque: "",
-  pannes: [], tier: null, dept: null, prenom: "", tel: "", ref: "", auto: false,
-  fPrenom: "", fTel: "", fSent: null
+  pannes: [], tier: null, dept: null, quand: null, quandLbl: "", prenom: "", tel: "", ref: "", auto: false,
+  via: "", fPrenom: "", fTel: "", fSent: null
 };
 const isCustom = () => !!(D.model && !D.model.prices);
 const modelName = () => (D.model ? D.model.name : "");
@@ -82,6 +85,96 @@ const deptTxt = () => {
   if (D.dept === "hors") return "Hors " + E.region;
   const d = S.zone.departements.find((x) => x[0] === D.dept);
   return d ? `${d[1]} (${d[0]})` : D.dept;
+};
+
+/* Quand le client veut le réparateur (calculé selon l'heure et les jours ouverts) */
+const fmtDate = (d, o) => new Intl.DateTimeFormat("fr-FR", o).format(d);
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+function quandOptions() {
+  const now = new Date();
+  const open = (d) => E.joursOuverts.includes(d.getDay());
+  const demain = new Date(now);
+  demain.setDate(now.getDate() + 1);
+  const next = new Date(demain);
+  for (let i = 0; i < 7 && !open(next); i++) next.setDate(next.getDate() + 1);
+  const todayOk = open(now) && now.getHours() < E.heureFin - 2;
+  const nextNom = next.toDateString() === demain.toDateString() ? "Demain" : cap(fmtDate(next, { weekday: "long" }));
+  return [
+    { id: "auj", nom: "Aujourd'hui", sub: todayOk ? "Si un créneau est libre" : "Plus de créneau aujourd'hui", off: !todayOk, ico: "flash",
+      lbl: `Aujourd'hui (${fmtDate(now, { weekday: "long", day: "numeric", month: "long" })})` },
+    { id: "dem", nom: nextNom, sub: cap(fmtDate(next, { weekday: "long", day: "numeric", month: "long" })), ico: "cal",
+      lbl: `${nextNom} (${fmtDate(next, { weekday: "long", day: "numeric", month: "long" })})`.replace(/^(\p{L}+) \(\1 /iu, "$1 (") },
+    { id: "sem", nom: "Cette semaine", sub: "Le jour qui t'arrange", ico: "cal", lbl: "Cette semaine" },
+    { id: "pp", nom: "Je ne suis pas pressé", sub: "On cale ça ensemble", ico: "clock", lbl: "Pas pressé" }
+  ];
+}
+
+/* D'où vient le client : ?via=tiktok dans le lien, sinon le navigateur intégré de l'appli, sinon le site d'origine */
+function detectVia() {
+  let v = "";
+  try { const q = new URLSearchParams(location.search); v = (q.get("via") || q.get("utm_source") || "").toLowerCase().trim(); } catch (err) { /* rien */ }
+  if (!v) {
+    const ua = navigator.userAgent || "";
+    if (/Instagram/i.test(ua)) v = "insta";
+    else if (/BytedanceWebview|musical_ly|TikTok|trill_/i.test(ua)) v = "tiktok";
+    else if (/Snapchat/i.test(ua)) v = "snap";
+    else if (/FBAN|FBAV|FB_IAB/i.test(ua)) v = "facebook";
+  }
+  if (!v) {
+    const r = document.referrer || "";
+    if (/google\./i.test(r)) v = "google";
+    else if (/instagram/i.test(r)) v = "insta";
+    else if (/tiktok/i.test(r)) v = "tiktok";
+    else if (/snapchat/i.test(r)) v = "snap";
+    else if (/facebook/i.test(r)) v = "facebook";
+  }
+  try {
+    if (v) sessionStorage.setItem("atelier-via", v);
+    else v = sessionStorage.getItem("atelier-via") || "";
+  } catch (err) { /* rien */ }
+  return v;
+}
+const viaTxt = () => (D.via ? (S.sources && S.sources[D.via]) || cap(D.via) : "");
+
+/* Reprise d'un devis commencé (stocké seulement sur le téléphone du client) */
+const DRAFT = "atelier-volant-devis";
+function saveDraft() {
+  if (!D.model || D.ref || page === "devis") return;
+  try {
+    localStorage.setItem(DRAFT, JSON.stringify({
+      ts: Date.now(), day: todayIso(), brand: D.brand,
+      modelId: D.model.prices ? D.model.id : null,
+      custom: D.model.prices ? null : { brand: D.model.brand, name: D.model.name },
+      pannes: D.pannes, tier: D.tier, dept: D.dept, quand: D.quand, quandLbl: D.quandLbl, prenom: D.prenom
+    }));
+  } catch (err) { /* stockage indisponible : tant pis */ }
+}
+function clearDraft() { try { localStorage.removeItem(DRAFT); } catch (err) { /* rien */ } }
+function loadDraft() {
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(DRAFT) || "null"); } catch (err) { return; }
+  if (!d || Date.now() - d.ts > 14 * 864e5) return;
+  D.brand = BRAND[d.brand] ? d.brand : "apple";
+  D.model = d.modelId ? MODELS[d.modelId] || null : d.custom ? { id: "custom", brand: d.custom.brand, name: d.custom.name, prices: null } : null;
+  if (!D.model) return;
+  D.pannes = (d.pannes || []).filter((id) => PANNE[id] || id === S.diagnostic.id);
+  D.tier = d.tier || null;
+  D.dept = d.dept || null;
+  if (d.day === todayIso()) { D.quand = d.quand || null; D.quandLbl = d.quandLbl || ""; }
+  D.prenom = d.prenom || "";
+}
+function resetDevis() {
+  Object.assign(D, { model: null, query: "", customOpen: false, customText: "", sousMarque: "", pannes: [], tier: null, dept: null, quand: null, quandLbl: "", ref: "", auto: false });
+  clearDraft();
+}
+const resumeTarget = () => {
+  if (!D.model) return "modele";
+  if (!D.pannes.length) return "pannes";
+  if (D.pannes.includes("ecran") && !D.tier) return "qualite";
+  if (!D.dept) return "zone";
+  if (!D.quand) return "quand";
+  return "numero";
 };
 
 function calc() {
@@ -140,7 +233,10 @@ const lineTxt = (l) => {
 
 function msgReparateur() {
   const c = calc();
-  const reply = `Bonjour${D.prenom ? " " + D.prenom : ""}, ici ${E.nom} 👋 Ton devis n° ${D.ref} pour ton ${modelName()} : ${c.onQuote ? "on regarde ensemble" : euro(c.total)}, déplacement offert. Quand es-tu disponible pour l'intervention ?`;
+  const quand = D.quand === "auj" ? "Je peux passer aujourd'hui, quel créneau t'arrange ?"
+    : D.quand === "dem" ? `Pour ${D.quandLbl.split(" (")[0].toLowerCase()}, quel créneau t'arrange ?`
+    : "Quel jour et quelle heure t'arrangent ?";
+  const reply = `Bonjour${D.prenom ? " " + D.prenom : ""}, ici ${E.nom} 👋 Ton devis n° ${D.ref} pour ton ${modelName()} : ${c.onQuote ? "on regarde ensemble" : euro(c.total)}, déplacement offert. ${quand}`;
   return [
     `🔧 Nouveau devis · ${E.nom}`,
     `N° ${D.ref}`,
@@ -150,10 +246,12 @@ function msgReparateur() {
     `💶 Total : ${c.onQuote ? "à confirmer" : euro(c.total)}`,
     "",
     `📍 ${deptTxt()}`,
+    `🗓 ${D.quandLbl}`,
     `👤 ${D.prenom || "Client"} · ${telNational(D.tel)}`,
+    viaTxt() ? `📣 Venu de : ${viaTxt()}` : "",
     "",
     `Répondre au client : ${waLink(reply, telIntl(D.tel))}`
-  ].join("\n");
+  ].filter((l, i, a) => l !== "" || (a[i - 1] !== "" && i > 0)).join("\n");
 }
 function msgClient() {
   const c = calc();
@@ -166,8 +264,10 @@ function msgClient() {
     `💶 Total : ${c.onQuote ? "à confirmer" : euro(c.total)}`,
     "",
     `📍 ${deptTxt()}`,
-    `👤 ${D.prenom || ""} · ${telNational(D.tel)}`.trim()
-  ].join("\n");
+    `🗓 ${D.quandLbl}`,
+    `👤 ${D.prenom || ""} · ${telNational(D.tel)}`.trim(),
+    viaTxt() ? `📣 Je vous ai trouvé sur ${viaTxt()}` : ""
+  ].filter((l, i, a) => l !== "" || i < a.length - 1).join("\n");
 }
 
 /* Envoi automatique sur le WhatsApp du réparateur (CallMeBot). Renvoie true si un envoi est parti. */
@@ -187,7 +287,8 @@ function envoyerAuto(texte) {
 /* ------------------------------------------------------------------ */
 /* Navigation                                                          */
 /* ------------------------------------------------------------------ */
-const STEP = { modele: 1, pannes: 2, qualite: 2, zone: 3, numero: 4, devis: 4 };
+const STEP = { modele: 1, pannes: 2, qualite: 2, zone: 3, quand: 4, numero: 5, devis: 5 };
+const STEPS = 5;
 let page = "home";
 let depth = 0;
 let useHistory = true;
@@ -195,14 +296,16 @@ let useHistory = true;
 const prevOf = (p) => ({
   modele: "home", pannes: "modele", qualite: "pannes",
   zone: D.pannes.includes("ecran") ? "qualite" : "pannes",
-  numero: "zone", devis: "numero", formation: "home"
+  quand: "zone", numero: "quand", devis: "numero", formation: "home"
 })[p] || "home";
 
 function guard(p) {
-  if (["pannes", "qualite", "zone", "numero", "devis"].includes(p) && !D.model) return "modele";
-  if (["qualite", "zone", "numero", "devis"].includes(p) && !D.pannes.length) return "pannes";
+  const is = (list) => list.includes(p);
+  if (is(["pannes", "qualite", "zone", "quand", "numero", "devis"]) && !D.model) return "modele";
+  if (is(["qualite", "zone", "quand", "numero", "devis"]) && !D.pannes.length) return "pannes";
   if (p === "qualite" && !D.pannes.includes("ecran")) return "zone";
-  if (["numero", "devis"].includes(p) && !D.dept) return "zone";
+  if (is(["quand", "numero", "devis"]) && !D.dept) return "zone";
+  if (is(["numero", "devis"]) && !D.quand) return "quand";
   if (p === "formation" && !(S.formation && S.formation.actif)) return "home";
   if (p === "devis" && !D.ref) return "numero";
   return p;
@@ -232,7 +335,7 @@ window.addEventListener("popstate", (ev) => {
 /* ------------------------------------------------------------------ */
 const head = (title, sub, kicker) =>
   `<div class="head">${kicker ? `<p class="kicker">${kicker}</p>` : ""}<h1 class="title" id="pageTitle" tabindex="-1">${title}</h1>${sub ? `<p class="sub">${sub}</p>` : ""}</div>`;
-const stepK = (p) => `Étape ${STEP[p]} sur 4`;
+const stepK = (p) => `Étape ${STEP[p]} sur ${STEPS}`;
 
 function faqHtml() {
   const fill = (s) => s.replace(/\{region\}/g, E.region).replace(/\{delai\}/g, E.delaiReponse).replace(/\{diagnostic\}/g, S.diagnostic.prix);
@@ -243,8 +346,17 @@ const VIEWS = {
   home: () => {
     const F = S.formation;
     const deux = !!(F && F.actif);
+    const n = D.pannes.length;
+    const resume = D.model && !D.ref ? `
+        <div class="resume">
+          <span class="resume__ico">${icon("phone", "ico--s")}</span>
+          <span class="resume__txt"><b>Ton devis en cours</b><span>${esc(modelName())}${n ? ` · ${n} réparation${n > 1 ? "s" : ""}` : ""}</span></span>
+          <button type="button" class="resume__go" data-act="resume">Reprendre</button>
+          <button type="button" class="resume__x" data-act="drop-draft" aria-label="Effacer ce devis">${icon("plus", "ico--xs")}</button>
+        </div>` : "";
     return `
       <div class="page">
+        ${resume}
         ${deux
           ? head("Qu'est-ce qui t'amène&nbsp;?", "Deux services, deux chemins. Choisis le tien.")
           : head("Ton téléphone réparé chez toi.", `Écran, batterie, charge… Un réparateur se déplace chez toi en ${esc(E.region)}.`)}
@@ -345,6 +457,17 @@ const VIEWS = {
       </div>
     </div>`,
 
+  quand: () => `
+    <div class="page">
+      ${head("Tu veux le réparateur quand&nbsp;?", "On te confirme l'heure exacte sur WhatsApp.", stepK("quand"))}
+      <div class="whens">${quandOptions().map((o) => `
+        <button type="button" class="when" data-quand="${o.id}" aria-pressed="${D.quand === o.id}"${o.off ? " disabled" : ""}>
+          <span class="when__ico">${icon(o.ico, "ico--s")}</span>
+          <span class="when__txt"><b>${esc(o.nom)}</b><span>${esc(o.sub)}</span></span>
+          ${icon(D.quand === o.id ? "check" : "chev", "chev")}
+        </button>`).join("")}</div>
+    </div>`,
+
   numero: () => {
     const c = calc();
     const hors = D.dept === "hors";
@@ -353,7 +476,7 @@ const VIEWS = {
         ${head(hors ? "On regarde si c'est possible" : "Ton devis arrive", hors
           ? `On ne se déplace pas encore partout hors ${esc(E.region)}. Laisse ton numéro : on te dit sur WhatsApp si on peut venir.`
           : `Laisse ton numéro, on t'écrit sur <b style="color:var(--ink)">WhatsApp</b> dans les ${esc(E.delaiReponse)}.`, stepK("numero"))}
-        <div class="recapmini"><span class="recapmini__ico">${icon("check", "ico--s")}</span><span class="recapmini__txt"><b>${esc(modelName())}</b><span>${c.lines.length} réparation${c.lines.length > 1 ? "s" : ""} · ${esc(deptTxt())}</span></span></div>
+        <div class="recapmini"><span class="recapmini__ico">${icon("check", "ico--s")}</span><span class="recapmini__txt"><b>${esc(modelName())}</b><span>${c.lines.length} réparation${c.lines.length > 1 ? "s" : ""} · ${esc(deptTxt())} · ${esc(D.quandLbl.split(" (")[0])}</span></span></div>
         <form id="telForm" novalidate style="display:grid;gap:14px">
           <div class="field"><label for="fPrenom">Ton prénom <span class="opt">facultatif</span></label><input class="input" id="fPrenom" type="text" autocomplete="given-name" enterkeyhint="next" value="${esc(D.prenom)}"></div>
           <div class="field">
@@ -379,7 +502,7 @@ const VIEWS = {
         ${status}
         <article class="ticket">
           <div class="ticket__top"><span class="tape">Devis</span><span class="ticket__ref">${esc(new Intl.DateTimeFormat("fr-FR").format(new Date()))}</span></div>
-          <p class="ticket__model">${esc(modelName())}<span>${esc(deptTxt())}${isCustom() ? " · prix indicatif" : ""}</span></p>
+          <p class="ticket__model">${esc(modelName())}<span>${esc(deptTxt())} · ${esc(D.quandLbl.split(" (")[0])}${isCustom() ? " · prix indicatif" : ""}</span></p>
           ${c.lines.map((l) => `
             <div class="tl">
               <span class="tl__n">${esc(l.nom)}${l.remise ? `<span class="minus">−${l.remise}&nbsp;%</span>` : ""}</span>
@@ -467,7 +590,7 @@ function msgFormation(auto) {
 /* Rendu                                                               */
 /* ------------------------------------------------------------------ */
 function battery(step, full) {
-  return `<span class="battery${full ? " is-full" : ""}" aria-label="Étape ${step} sur 4"><span class="battery__body">${[1, 2, 3, 4].map((i) => `<span class="battery__cell${i <= step ? " on" : ""}"></span>`).join("")}</span>${full ? "100 %" : `${step}/4`}</span>`;
+  return `<span class="battery${full ? " is-full" : ""}" aria-label="Étape ${step} sur ${STEPS}"><span class="battery__body">${Array.from({ length: STEPS }, (_, k) => k + 1).map((i) => `<span class="battery__cell${i <= step ? " on" : ""}"></span>`).join("")}</span>${full ? "100 %" : `${step}/${STEPS}`}</span>`;
 }
 function barHtml() {
   const btn = (label, act, disabled) => `<button type="button" class="btn btn--amber" data-act="${act}"${disabled ? " disabled" : ""}>${label}</button>`;
@@ -497,6 +620,7 @@ function render() {
   window.scrollTo(0, 0);
   const h = $("#pageTitle");
   if (h && page !== "home") h.focus({ preventScroll: true });
+  saveDraft();
 }
 function refresh() {
   const top = window.scrollY;
@@ -511,6 +635,7 @@ function refresh() {
     const el = $(`[data-${focusSel[0].replace(/[A-Z]/g, (m) => "-" + m.toLowerCase())}="${CSS.escape(focusSel[1])}"]`);
     if (el) el.focus({ preventScroll: true });
   }
+  saveDraft();
 }
 
 /* Fenêtre « C'est quoi la différence ? » */
@@ -531,7 +656,7 @@ function closeSheet() {
 document.addEventListener("click", (ev) => {
   const t = ev.target;
   const goEl = t.closest("[data-go]");
-  if (goEl) { ev.preventDefault(); go(goEl.dataset.go); return; }
+  if (goEl) { ev.preventDefault(); if (page === "devis") { D.ref = ""; D.auto = false; } go(goEl.dataset.go); return; }
   if (t.closest("#backBtn")) { back(); return; }
   if (t.closest("#logoBtn")) { ev.preventDefault(); if (page !== "home") go("home"); return; }
 
@@ -559,7 +684,16 @@ document.addEventListener("click", (ev) => {
   const tier = t.closest("[data-tier]");
   if (tier) { D.tier = tier.dataset.tier; refresh(); setTimeout(() => go("zone"), 200); return; }
   const dept = t.closest("[data-dept]");
-  if (dept) { D.dept = dept.dataset.dept; refresh(); setTimeout(() => go("numero"), 170); return; }
+  if (dept) { D.dept = dept.dataset.dept; refresh(); setTimeout(() => go("quand"), 170); return; }
+  const quand = t.closest("[data-quand]");
+  if (quand && !quand.disabled) {
+    const o = quandOptions().find((x) => x.id === quand.dataset.quand);
+    D.quand = o.id;
+    D.quandLbl = o.lbl;
+    refresh();
+    setTimeout(() => go("numero"), 170);
+    return;
+  }
 
   const act = t.closest("[data-act]");
   if (!act || act.disabled) return;
@@ -589,6 +723,13 @@ document.addEventListener("click", (ev) => {
       break;
     case "close-sheet":
       closeSheet();
+      break;
+    case "resume":
+      go(resumeTarget());
+      break;
+    case "drop-draft":
+      resetDevis();
+      refresh();
       break;
   }
 });
@@ -640,6 +781,7 @@ document.addEventListener("submit", (ev) => {
     btn.innerHTML = '<span class="spin" aria-hidden="true"></span> Envoi de ton devis…';
     D.ref = makeRef();
     D.auto = envoyerAuto(msgReparateur());
+    clearDraft();
     setTimeout(() => go("devis"), 650);
   }
   if (ev.target.id === "formForm") {
@@ -660,6 +802,8 @@ document.addEventListener("submit", (ev) => {
 const [deb, ...fin] = E.nom.split(" ");
 $("#logoTxt").innerHTML = E.nomDebut ? `${esc(E.nomDebut)} <em>${esc(E.nomFin || "")}</em>` : `${esc(deb)} <em>${esc(fin.join(" "))}</em>`;
 $("#backBtn").innerHTML = icon("back");
+D.via = detectVia();
+loadDraft();
 try { history.replaceState({ p: "home" }, ""); } catch (err) { useHistory = false; }
 const start = location.hash === "#devis" || location.hash === "#reparer" ? "modele" : location.hash === "#formation" ? "formation" : "home";
 if (start !== "home") go(start);

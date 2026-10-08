@@ -5,7 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Réparation de téléphone à domicile en Île-de-France. Ton prix en 40 secondes, un réparateur chez toi.">
 <meta name="theme-color" content="#06242A">
-<title>L'Atelier Volant</title>
+<title>L'Atelier Volant · Ton prix en 40 secondes</title>
+<!-- Aperçu du lien (WhatsApp, Instagram, SMS…) : adresses COMPLÈTES, à changer si le site change d'adresse -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="L'Atelier Volant">
+<meta property="og:title" content="Ton téléphone réparé chez toi · L'Atelier Volant">
+<meta property="og:description" content="Écran, batterie, charge… Ton prix en 40 secondes, un réparateur se déplace chez toi en Île-de-France.">
+<meta property="og:url" content="https://elyasberdouz-stack.github.io/atelier-volant/">
+<meta property="og:image" content="https://elyasberdouz-stack.github.io/atelier-volant/apercu.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="fr_FR">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@400..800&family=Funnel+Sans:wght@400..700&family=JetBrains+Mono:wght@400;500;600&display=swap">
@@ -82,7 +95,7 @@ svg{display:block;flex:none}
 /* ---------- Pages ---------- */
 .view{padding-block:30px calc(48px + env(safe-area-inset-bottom,0px));min-height:60vh}
 body.has-bar .view{padding-bottom:170px}
-.page{display:grid;gap:22px;animation:pageIn .32s cubic-bezier(.2,.8,.2,1) both}
+.page{display:grid;grid-template-columns:minmax(0,1fr);gap:22px;animation:pageIn .32s cubic-bezier(.2,.8,.2,1) both}
 @keyframes pageIn{from{opacity:0;transform:translateY(10px)}}
 .kicker{font:600 .76rem/1 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
 .title{font-size:clamp(2.15rem,9vw,2.9rem);line-height:1.04;letter-spacing:-.045em;outline:none}
@@ -193,6 +206,31 @@ body.has-bar .view{padding-bottom:170px}
 .dept b{font:650 1.6rem/1 var(--f-display);letter-spacing:-.03em}
 .dept span{color:var(--muted);font-size:.9rem}
 .dept--wide{grid-column:1/-1;min-height:64px;font-weight:600}
+
+/* Quand */
+.whens{display:grid;gap:10px}
+.when{display:flex;align-items:center;gap:14px;width:100%;min-height:78px;padding:14px 16px;border-radius:18px;background:var(--card);border:1.5px solid var(--line);text-align:left;transition:border-color .2s,background-color .2s,transform .15s}
+.when:hover{border-color:var(--line-2)}
+.when:active{transform:scale(.99)}
+.when[aria-pressed="true"]{border-color:var(--amber);background:var(--card-2)}
+.when:disabled{opacity:.42;cursor:not-allowed}
+.when__ico{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;flex:none;background:var(--amber-soft);color:var(--amber)}
+.when:first-child:not(:disabled) .when__ico{background:var(--amber);color:var(--amber-ink)}
+.when__txt{flex:1;min-width:0}
+.when__txt b{display:block;font-size:1.08rem}
+.when__txt span{display:block;font-size:.9rem;color:var(--muted)}
+.when .chev{color:var(--faint)}
+.when[aria-pressed="true"] .chev{color:var(--amber)}
+
+/* Devis en cours */
+.resume{display:flex;align-items:center;gap:12px;padding:12px 12px 12px 14px;border-radius:18px;background:var(--mint-soft);border:1px solid var(--mint-line)}
+.resume__ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:none;background:var(--mint);color:var(--mint-ink)}
+.resume__txt{flex:1;min-width:0}
+.resume__txt b{display:block;font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.resume__txt span{display:block;font-size:.86rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.resume__go{min-height:40px;padding:0 14px;border-radius:12px;background:var(--mint);color:var(--mint-ink);font-weight:650;font-size:.92rem;flex:none}
+.resume__x{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;color:var(--muted);transform:rotate(45deg)}
+.resume__x:hover{color:var(--ink);background:rgba(255,255,255,.06)}
 
 /* Numéro */
 .recapmini{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:18px;background:var(--card);border:1px solid var(--line)}

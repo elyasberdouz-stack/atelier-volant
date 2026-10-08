@@ -36,6 +36,16 @@ window.SITE = {
     numero: ""                          // vide = le numéro « whatsapp » ci-dessus
   },
 
+  /* ---------------- D'où viennent les clients ----------------
+     Le message WhatsApp indique « Venu de : TikTok », etc.
+     Détecté tout seul quand le lien est ouvert depuis l'appli Instagram, TikTok, Snapchat ou Facebook.
+     Pour être sûr, mettre dans chaque bio le lien avec ?via=… à la fin, par exemple :
+       https://elyasberdouz-stack.github.io/atelier-volant/?via=tiktok */
+  sources: {
+    tiktok: "TikTok", insta: "Instagram", snap: "Snapchat", facebook: "Facebook",
+    google: "Google", whatsapp: "WhatsApp", flyer: "Flyer / carte de visite"
+  },
+
   /* ---------------- Remises plusieurs réparations ---------------- */
   remises: { deuxieme: 20, suivantes: 30 },   // en %, appliquées des plus chères aux moins chères
 

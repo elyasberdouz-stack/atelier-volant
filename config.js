@@ -16,8 +16,8 @@ window.SITE = {
     region: "Île-de-France",
     // Pour la démo : numéro WhatsApp d'Elyas, pour recevoir les devis de test. À remplacer par celui du réparateur.
     telephoneAffiche: "07 60 35 46 38",
-    telephoneLien: "+213760354638",
-    whatsapp: "213760354638",           // numéro WhatsApp du réparateur : indicatif + numéro, sans « + » ni espaces
+    telephoneLien: "+33760354638",
+    whatsapp: "33760354638",          // numéro WhatsApp du réparateur : indicatif + numéro, sans « + » ni espaces
     delaiReponse: "5 minutes",
     joursOuverts: [1, 2, 3, 4, 5, 6],   // 0 = dimanche … 6 = samedi
     heureFin: 19,                       // après cette heure, le site affiche « Disponible demain »

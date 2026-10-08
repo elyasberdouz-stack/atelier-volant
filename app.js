@@ -75,7 +75,7 @@ const minScreen = Math.min(...Object.values(MODELS).map((m) => screenFrom(m)).fi
 /* État du devis */
 const D = {
   brand: "apple", model: null, query: "", customOpen: false, customText: "", sousMarque: "",
-  pannes: [], tier: null, dept: null, quand: null, quandLbl: "", prenom: "", tel: "", ref: "", auto: false,
+  pannes: [], tier: null, dept: null, prenom: "", tel: "", ref: "", auto: false,
   via: "", fPrenom: "", fTel: "", fSent: null
 };
 const isCustom = () => !!(D.model && !D.model.prices);
@@ -87,28 +87,9 @@ const deptTxt = () => {
   return d ? `${d[1]} (${d[0]})` : D.dept;
 };
 
-/* Quand le client veut le réparateur (calculé selon l'heure et les jours ouverts) */
-const fmtDate = (d, o) => new Intl.DateTimeFormat("fr-FR", o).format(d);
+/* Petits outils de texte et de date */
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
-function quandOptions() {
-  const now = new Date();
-  const open = (d) => E.joursOuverts.includes(d.getDay());
-  const demain = new Date(now);
-  demain.setDate(now.getDate() + 1);
-  const next = new Date(demain);
-  for (let i = 0; i < 7 && !open(next); i++) next.setDate(next.getDate() + 1);
-  const todayOk = open(now) && now.getHours() < E.heureFin - 2;
-  const nextNom = next.toDateString() === demain.toDateString() ? "Demain" : cap(fmtDate(next, { weekday: "long" }));
-  return [
-    { id: "auj", nom: "Aujourd'hui", sub: todayOk ? "Si un créneau est libre" : "Plus de créneau aujourd'hui", off: !todayOk, ico: "flash",
-      lbl: `Aujourd'hui (${fmtDate(now, { weekday: "long", day: "numeric", month: "long" })})` },
-    { id: "dem", nom: nextNom, sub: cap(fmtDate(next, { weekday: "long", day: "numeric", month: "long" })), ico: "cal",
-      lbl: `${nextNom} (${fmtDate(next, { weekday: "long", day: "numeric", month: "long" })})`.replace(/^(\p{L}+) \(\1 /iu, "$1 (") },
-    { id: "sem", nom: "Cette semaine", sub: "Le jour qui t'arrange", ico: "cal", lbl: "Cette semaine" },
-    { id: "pp", nom: "Je ne suis pas pressé", sub: "On cale ça ensemble", ico: "clock", lbl: "Pas pressé" }
-  ];
-}
 
 /* D'où vient le client : ?via=tiktok dans le lien, sinon le navigateur intégré de l'appli, sinon le site d'origine */
 function detectVia() {
@@ -146,7 +127,7 @@ function saveDraft() {
       ts: Date.now(), day: todayIso(), brand: D.brand,
       modelId: D.model.prices ? D.model.id : null,
       custom: D.model.prices ? null : { brand: D.model.brand, name: D.model.name },
-      pannes: D.pannes, tier: D.tier, dept: D.dept, quand: D.quand, quandLbl: D.quandLbl, prenom: D.prenom
+      pannes: D.pannes, tier: D.tier, dept: D.dept, prenom: D.prenom
     }));
   } catch (err) { /* stockage indisponible : tant pis */ }
 }
@@ -161,11 +142,10 @@ function loadDraft() {
   D.pannes = (d.pannes || []).filter((id) => PANNE[id] || id === S.diagnostic.id);
   D.tier = d.tier || null;
   D.dept = d.dept || null;
-  if (d.day === todayIso()) { D.quand = d.quand || null; D.quandLbl = d.quandLbl || ""; }
   D.prenom = d.prenom || "";
 }
 function resetDevis() {
-  Object.assign(D, { model: null, query: "", customOpen: false, customText: "", sousMarque: "", pannes: [], tier: null, dept: null, quand: null, quandLbl: "", ref: "", auto: false });
+  Object.assign(D, { model: null, query: "", customOpen: false, customText: "", sousMarque: "", pannes: [], tier: null, dept: null, ref: "", auto: false });
   clearDraft();
 }
 const resumeTarget = () => {
@@ -173,7 +153,6 @@ const resumeTarget = () => {
   if (!D.pannes.length) return "pannes";
   if (D.pannes.includes("ecran") && !D.tier) return "qualite";
   if (!D.dept) return "zone";
-  if (!D.quand) return "quand";
   return "numero";
 };
 
@@ -233,10 +212,7 @@ const lineTxt = (l) => {
 
 function msgReparateur() {
   const c = calc();
-  const quand = D.quand === "auj" ? "Je peux passer aujourd'hui, quel créneau t'arrange ?"
-    : D.quand === "dem" ? `Pour ${D.quandLbl.split(" (")[0].toLowerCase()}, quel créneau t'arrange ?`
-    : "Quel jour et quelle heure t'arrangent ?";
-  const reply = `Bonjour${D.prenom ? " " + D.prenom : ""}, ici ${E.nom} 👋 Ton devis n° ${D.ref} pour ton ${modelName()} : ${c.onQuote ? "on regarde ensemble" : euro(c.total)}, déplacement offert. ${quand}`;
+  const reply = `Bonjour${D.prenom ? " " + D.prenom : ""}, ici ${E.nom} 👋 Ton devis n° ${D.ref} pour ton ${modelName()} : ${c.onQuote ? "on regarde ensemble" : euro(c.total)}. Tu peux passer en boutique quand tu veux, ou dis-moi quand ça t'arrange.`;
   return [
     `🔧 Nouveau devis · ${E.nom}`,
     `N° ${D.ref}`,
@@ -246,7 +222,6 @@ function msgReparateur() {
     `💶 Total : ${c.onQuote ? "à confirmer" : euro(c.total)}`,
     "",
     `📍 ${deptTxt()}`,
-    `🗓 ${D.quandLbl}`,
     `👤 ${D.prenom || "Client"} · ${telNational(D.tel)}`,
     viaTxt() ? `📣 Venu de : ${viaTxt()}` : "",
     "",
@@ -264,7 +239,6 @@ function msgClient() {
     `💶 Total : ${c.onQuote ? "à confirmer" : euro(c.total)}`,
     "",
     `📍 ${deptTxt()}`,
-    `🗓 ${D.quandLbl}`,
     `👤 ${D.prenom || ""} · ${telNational(D.tel)}`.trim(),
     viaTxt() ? `📣 Je vous ai trouvé sur ${viaTxt()}` : ""
   ].filter((l, i, a) => l !== "" || i < a.length - 1).join("\n");
@@ -287,8 +261,8 @@ function envoyerAuto(texte) {
 /* ------------------------------------------------------------------ */
 /* Navigation                                                          */
 /* ------------------------------------------------------------------ */
-const STEP = { modele: 1, pannes: 2, qualite: 2, zone: 3, quand: 4, numero: 5, devis: 5 };
-const STEPS = 5;
+const STEP = { modele: 1, pannes: 2, qualite: 2, zone: 3, numero: 4, devis: 4 };
+const STEPS = 4;
 let page = "home";
 let depth = 0;
 let useHistory = true;
@@ -296,16 +270,15 @@ let useHistory = true;
 const prevOf = (p) => ({
   modele: "home", pannes: "modele", qualite: "pannes",
   zone: D.pannes.includes("ecran") ? "qualite" : "pannes",
-  quand: "zone", numero: "quand", devis: "numero", formation: "home"
+  numero: "zone", devis: "numero", formation: "home"
 })[p] || "home";
 
 function guard(p) {
   const is = (list) => list.includes(p);
-  if (is(["pannes", "qualite", "zone", "quand", "numero", "devis"]) && !D.model) return "modele";
-  if (is(["qualite", "zone", "quand", "numero", "devis"]) && !D.pannes.length) return "pannes";
+  if (is(["pannes", "qualite", "zone", "numero", "devis"]) && !D.model) return "modele";
+  if (is(["qualite", "zone", "numero", "devis"]) && !D.pannes.length) return "pannes";
   if (p === "qualite" && !D.pannes.includes("ecran")) return "zone";
-  if (is(["quand", "numero", "devis"]) && !D.dept) return "zone";
-  if (is(["numero", "devis"]) && !D.quand) return "quand";
+  if (is(["numero", "devis"]) && !D.dept) return "zone";
   if (p === "formation" && !(S.formation && S.formation.actif)) return "home";
   if (p === "devis" && !D.ref) return "numero";
   return p;
@@ -350,7 +323,7 @@ const VIEWS = {
     const resume = D.model && !D.ref ? `
         <div class="resume">
           <span class="resume__ico">${icon("phone", "ico--s")}</span>
-          <span class="resume__txt"><b>Ton devis en cours</b><span>${esc(modelName())}${n ? ` · ${n} réparation${n > 1 ? "s" : ""}` : ""}</span></span>
+          <span class="resume__txt"><b>Devis en cours</b><span>${esc(modelName())}${n ? ` · ${n} réparation${n > 1 ? "s" : ""}` : ""}</span></span>
           <button type="button" class="resume__go" data-act="resume">Reprendre</button>
           <button type="button" class="resume__x" data-act="drop-draft" aria-label="Effacer ce devis">${icon("plus", "ico--xs")}</button>
         </div>` : "";
@@ -359,13 +332,12 @@ const VIEWS = {
         ${resume}
         ${deux
           ? head("Qu'est-ce qui t'amène&nbsp;?", "Deux services, deux chemins. Choisis le tien.")
-          : head("Ton téléphone réparé chez toi.", `Écran, batterie, charge… Un réparateur se déplace chez toi en ${esc(E.region)}.`)}
+          : head("Ton téléphone réparé en boutique.", "Écran, batterie, charge… Vois ton prix avant même de venir.")}
         <div class="choices">
           <a class="choice choice--hi" href="#reparer" data-go="modele">
-            <span class="badge badge--accent">${icon("maison", "ico--xs")} Réparation à domicile</span>
             <h2>${deux ? "Réparer mon téléphone" : "Obtenir mon devis"}</h2>
-            <p>${deux ? `Ton prix en 40 secondes, un réparateur chez toi en ${esc(E.region)}.` : "Choisis ton modèle et la panne : ton prix s'affiche en 40 secondes."}</p>
-            <span class="choice__foot"><span class="choice__from">Écran dès <b>${euro(minScreen)}</b> · déplacement offert</span><span class="go">${icon("arrow")}</span></span>
+            <p>${deux ? "Ton prix en 40 secondes, sans surprise en boutique." : "Choisis ton modèle et la panne : ton prix s'affiche en 40 secondes."}</p>
+            <span class="choice__foot"><span class="choice__from">Écran dès <b>${euro(minScreen)}</b> · prix fixe annoncé</span><span class="go">${icon("arrow")}</span></span>
           </a>
           ${F && F.actif ? `
           <a class="choice" href="#formation" data-go="formation">
@@ -425,7 +397,7 @@ const VIEWS = {
         ${head("Qu'est-ce qu'il faut réparer&nbsp;?", `${esc(modelName())} · choisis ce qui correspond.`, stepK("pannes"))}
         <div class="promo"><span class="promo__ico">${icon("percent", "ico--s")}</span><p>Tu peux en choisir plusieurs<b>−${R.deuxieme}&nbsp;% sur ta 2<sup>e</sup> réparation, −${R.suivantes}&nbsp;% sur les suivantes</b></p></div>
         <div class="list">${rows.join("")}</div>
-        ${isCustom() ? '<p class="note">Prix indicatifs : ton modèle n\'est pas dans notre liste, on te confirme le prix sur WhatsApp.</p>' : '<p class="note">Prix comprenant la pièce et la main-d\'œuvre. Déplacement offert.</p>'}
+        ${isCustom() ? '<p class="note">Prix indicatifs : ton modèle n\'est pas dans notre liste, on te confirme le prix sur WhatsApp.</p>' : '<p class="note">Prix comprenant la pièce et la main-d\'œuvre.</p>'}
       </div>`;
   },
 
@@ -450,22 +422,11 @@ const VIEWS = {
 
   zone: () => `
     <div class="page">
-      ${head("Tu es dans quel département&nbsp;?", "Le réparateur se déplace chez toi.", stepK("zone"))}
+      ${head("Tu es dans quel département&nbsp;?", "On t'oriente vers la boutique la plus proche.", stepK("zone"))}
       <div class="depts">
         ${S.zone.departements.map(([num, nom]) => `<button type="button" class="dept" data-dept="${num}" aria-pressed="${D.dept === num}"><b>${esc(num)}</b><span>${esc(nom)}</span></button>`).join("")}
         <button type="button" class="dept dept--wide" data-dept="hors" aria-pressed="${D.dept === "hors"}">${esc(S.zone.horsZone)}</button>
       </div>
-    </div>`,
-
-  quand: () => `
-    <div class="page">
-      ${head("Tu veux le réparateur quand&nbsp;?", "On te confirme l'heure exacte sur WhatsApp.", stepK("quand"))}
-      <div class="whens">${quandOptions().map((o) => `
-        <button type="button" class="when" data-quand="${o.id}" aria-pressed="${D.quand === o.id}"${o.off ? " disabled" : ""}>
-          <span class="when__ico">${icon(o.ico, "ico--s")}</span>
-          <span class="when__txt"><b>${esc(o.nom)}</b><span>${esc(o.sub)}</span></span>
-          ${icon(D.quand === o.id ? "check" : "chev", "chev")}
-        </button>`).join("")}</div>
     </div>`,
 
   numero: () => {
@@ -474,9 +435,9 @@ const VIEWS = {
     return `
       <div class="page">
         ${head(hors ? "On regarde si c'est possible" : "Ton devis arrive", hors
-          ? `On ne se déplace pas encore partout hors ${esc(E.region)}. Laisse ton numéro : on te dit sur WhatsApp si on peut venir.`
+          ? `On n'a pas encore de boutique hors ${esc(E.region)}. Laisse ton numéro : on te dit sur WhatsApp ce qu'on peut faire pour toi.`
           : `Laisse ton numéro, on t'écrit sur <b style="color:var(--ink)">WhatsApp</b> dans les ${esc(E.delaiReponse)}.`, stepK("numero"))}
-        <div class="recapmini"><span class="recapmini__ico">${icon("check", "ico--s")}</span><span class="recapmini__txt"><b>${esc(modelName())}</b><span>${c.lines.length} réparation${c.lines.length > 1 ? "s" : ""} · ${esc(deptTxt())} · ${esc(D.quandLbl.split(" (")[0])}</span></span></div>
+        <div class="recapmini"><span class="recapmini__ico">${icon("check", "ico--s")}</span><span class="recapmini__txt"><b>${esc(modelName())}</b><span>${c.lines.length} réparation${c.lines.length > 1 ? "s" : ""} · ${esc(deptTxt())}</span></span></div>
         <form id="telForm" novalidate style="display:grid;gap:14px">
           <div class="field"><label for="fPrenom">Ton prénom <span class="opt">facultatif</span></label><input class="input" id="fPrenom" type="text" autocomplete="given-name" enterkeyhint="next" value="${esc(D.prenom)}"></div>
           <div class="field">
@@ -502,14 +463,13 @@ const VIEWS = {
         ${status}
         <article class="ticket">
           <div class="ticket__top"><span class="tape">Devis</span><span class="ticket__ref">${esc(new Intl.DateTimeFormat("fr-FR").format(new Date()))}</span></div>
-          <p class="ticket__model">${esc(modelName())}<span>${esc(deptTxt())} · ${esc(D.quandLbl.split(" (")[0])}${isCustom() ? " · prix indicatif" : ""}</span></p>
+          <p class="ticket__model">${esc(modelName())}<span>${esc(deptTxt())}${isCustom() ? " · prix indicatif" : ""}</span></p>
           ${c.lines.map((l) => `
             <div class="tl">
               <span class="tl__n">${esc(l.nom)}${l.remise ? `<span class="minus">−${l.remise}&nbsp;%</span>` : ""}</span>
               <span class="tl__m">${esc(l.meta)}</span>
               <span class="tl__p">${l.final == null ? "Sur devis" : l.diag && l.final === 0 ? "Offert" : euro(l.final)}${l.remise ? `<s>${euro(l.prix)}</s>` : ""}</span>
             </div>`).join("")}
-          <div class="tl"><span class="tl__n">Déplacement</span><span class="tl__m">${esc(E.region)}</span><span class="tl__p">Offert</span></div>
           <div class="cut"></div>
           <div class="ticket__total"><span>Total</span><b>${c.onQuote ? "À confirmer" : euro(c.total)}</b></div>
           ${c.save ? `<p class="ticket__save">Tu économises ${euro(c.save)} avec la remise multi-réparations.</p>` : ""}
@@ -527,8 +487,8 @@ const VIEWS = {
         </div>
         <p class="section-t">Et maintenant&nbsp;?</p>
         <ol class="how">
-          <li><span class="how__n">01</span><span class="how__txt"><b>On te confirme un créneau</b><span>Sur WhatsApp, au moment qui t'arrange.</span></span></li>
-          <li><span class="how__n">02</span><span class="how__txt"><b>Le réparateur vient chez toi</b><span>Il répare sous tes yeux, en général en moins d'une heure.</span></span></li>
+          <li><span class="how__n">01</span><span class="how__txt"><b>On te répond sur WhatsApp</b><span>On confirme ton devis et on prépare la pièce.</span></span></li>
+          <li><span class="how__n">02</span><span class="how__txt"><b>Tu passes en boutique</b><span>La plupart des réparations sont faites en moins d'une heure.</span></span></li>
           <li><span class="how__n">03</span><span class="how__txt"><b>Tu paies quand tout marche</b><span>Carte, espèces ou virement instantané.</span></span></li>
         </ol>
       </div>`;
@@ -684,16 +644,7 @@ document.addEventListener("click", (ev) => {
   const tier = t.closest("[data-tier]");
   if (tier) { D.tier = tier.dataset.tier; refresh(); setTimeout(() => go("zone"), 200); return; }
   const dept = t.closest("[data-dept]");
-  if (dept) { D.dept = dept.dataset.dept; refresh(); setTimeout(() => go("quand"), 170); return; }
-  const quand = t.closest("[data-quand]");
-  if (quand && !quand.disabled) {
-    const o = quandOptions().find((x) => x.id === quand.dataset.quand);
-    D.quand = o.id;
-    D.quandLbl = o.lbl;
-    refresh();
-    setTimeout(() => go("numero"), 170);
-    return;
-  }
+  if (dept) { D.dept = dept.dataset.dept; refresh(); setTimeout(() => go("numero"), 170); return; }
 
   const act = t.closest("[data-act]");
   if (!act || act.disabled) return;

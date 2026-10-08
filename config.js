@@ -88,7 +88,7 @@ window.SITE = {
   prixIndicatifs: [60, 90, 180, 60, 60, 70, 60, 45, 45, 45],
 
   /* ---------------- Marques, modèles et prix ----------------
-     Prix en euros, pièce + main-d'œuvre.
+     Prix en euros, pièce + main-d'œuvre, déplacement offert.
      Ordre des 10 prix :
        écran premium, écran Soft OLED, écran original,
        batterie, connecteur, caméra, vitre arrière, haut-parleur, micro, boutons.
@@ -291,9 +291,9 @@ window.SITE = {
   avisExemples: true,
   avis: [
     { prenom: "Camille", lieu: "Paris 11e", note: 5, reparation: "Écran Soft OLED · iPhone 14",
-      texte: "Écran changé pendant ma pause déj, j'ai attendu sur place. Le prix était exactement celui du site." },
+      texte: "Écran changé sur la table du salon pendant ma pause déj. Le prix était exactement celui du site." },
     { prenom: "Mehdi", lieu: "Montreuil", note: 5, reparation: "Batterie · Galaxy S22",
-      texte: "Réponse sur WhatsApp en 3 minutes, téléphone réparé le jour même. Très pro." },
+      texte: "Message WhatsApp en 3 minutes, réparateur chez moi le soir même. Très pro." },
     { prenom: "Sophie", lieu: "Boulogne", note: 5, reparation: "Connecteur · iPhone 12",
       texte: "Je pensais devoir racheter un téléphone. C'était juste le connecteur, réparé en 40 minutes." },
     { prenom: "Julien", lieu: "Créteil", note: 4, reparation: "Vitre arrière · Pixel 8",
@@ -304,15 +304,15 @@ window.SITE = {
      Mots remplacés automatiquement : {region}, {delai}, {diagnostic}. */
   faq: [
     { q: "Le prix affiché, c'est le prix final ?",
-      r: "Oui. C'est un prix fixe, pièce et main-d'œuvre comprises. Si le réparateur découvre une autre panne, il te prévient avant de toucher à quoi que ce soit." },
+      r: "Oui. C'est un prix fixe, pièce et main-d'œuvre comprises, déplacement offert en {region}. Si le réparateur découvre une autre panne sur place, il te prévient avant de toucher à quoi que ce soit." },
     { q: "Combien de temps dure une réparation ?",
-      r: "La plupart des réparations prennent 30 à 60 minutes : tu peux attendre en boutique ou revenir le récupérer. Une vitre arrière peut demander un peu plus." },
-    { q: "Il faut prendre rendez-vous ?",
-      r: "Ce n'est pas obligatoire. Mais en envoyant ton devis avant de venir, tu es sûr que la pièce est prête quand tu arrives." },
+      r: "La plupart des réparations prennent 30 à 60 minutes, chez toi, sous tes yeux. Une vitre arrière peut demander un peu plus." },
+    { q: "Tu viens vraiment chez moi ?",
+      r: "Oui : chez toi, au bureau ou où tu veux en {region}. Il faut juste une table et un peu de lumière." },
     { q: "Quel écran choisir ?",
       r: "Le Soft OLED est le meilleur compromis : presque identique à l'original pour bien moins cher. Le premium dépanne pour un petit budget, l'original est là si tu veux exactement la pièce du constructeur." },
     { q: "Quelle garantie ?",
-      r: "De 1 à 6 mois selon la pièce choisie. Si un souci vient de la réparation, on la reprend gratuitement." },
+      r: "De 1 à 6 mois selon la pièce choisie. Si un souci vient de la réparation, on revient gratuitement." },
     { q: "Je paie comment ?",
       r: "Après la réparation, une fois que tout marche : carte, espèces ou virement instantané." },
     { q: "Et si je ne sais pas ce qui ne va pas ?",
